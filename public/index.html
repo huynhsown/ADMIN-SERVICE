@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SME Admin Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <div class="login-container">
+                <h2><i class="fas fa-shield-alt"></i> Admin Login</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="username">Username:</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                </form>
+                <div id="loginError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="dashboard" style="display: none;">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-chart-line"></i> SME Admin Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <span id="currentTime"></span>
+                <button id="logoutBtn" class="btn btn-secondary">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav">
+            <ul>
+                <li><a href="#overview" class="nav-link active" data-section="overview">
+                    <i class="fas fa-tachometer-alt"></i> Tổng quan
+                </a></li>
+                <li><a href="#users" class="nav-link" data-section="users">
+                    <i class="fas fa-users"></i> Người dùng
+                </a></li>
+                <li><a href="#posts" class="nav-link" data-section="posts">
+                    <i class="fas fa-file-alt"></i> Bài viết
+                </a></li>
+                <li><a href="#comments" class="nav-link" data-section="comments">
+                    <i class="fas fa-comments"></i> Bình luận
+                </a></li>
+                <li><a href="#reactions" class="nav-link" data-section="reactions">
+                    <i class="fas fa-heart"></i> Tương tác
+                </a></li>
+                <li><a href="#notifications" class="nav-link" data-section="notifications">
+                    <i class="fas fa-bell"></i> Thông báo
+                </a></li>
+                <li><a href="#health" class="nav-link" data-section="health">
+                    <i class="fas fa-heartbeat"></i> Hệ thống
+                </a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Overview Section -->
+            <section id="overview" class="content-section active">
+                <h2><i class="fas fa-tachometer-alt"></i> Tổng quan hệ thống</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon users">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalUsers">-</h3>
+                            <p>Tổng người dùng</p>
+                            <small id="todayUsers">Hôm nay: -</small>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon posts">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalPosts">-</h3>
+                            <p>Tổng bài viết</p>
+                            <small id="todayPosts">Hôm nay: -</small>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon comments">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalComments">-</h3>
+                            <p>Tổng bình luận</p>
+                            <small id="todayComments">Hôm nay: -</small>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon reactions">
+                            <i class="fas fa-heart"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalReactions">-</h3>
+                            <p>Tổng tương tác</p>
+                            <small id="reactionTypes">-</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Thống kê người dùng theo thời gian</h3>
+                        <canvas id="userChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Phân bố loại bài viết</h3>
+                        <canvas id="postTypeChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Users Section -->
+            <section id="users" class="content-section">
+                <h2><i class="fas fa-users"></i> Quản lý người dùng</h2>
+                
+                <div class="section-stats">
+                    <div class="mini-stat">
+                        <span class="label">Tổng:</span>
+                        <span class="value" id="userTotal">-</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span class="label">Hôm nay:</span>
+                        <span class="value" id="userToday">-</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span class="label">Tuần này:</span>
+                        <span class="value" id="userWeek">-</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span class="label">Tháng này:</span>
+                        <span class="value" id="userMonth">-</span>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <h3>Người dùng gần đây</h3>
+                    <table id="recentUsersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Tên</th>
+                                <th>Email</th>
+                                <th>Ngày tạo</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Posts Section -->
+            <section id="posts" class="content-section">
+                <h2><i class="fas fa-file-alt"></i> Quản lý bài viết</h2>
+                
+                <div class="section-stats">
+                    <div class="mini-stat">
+                        <span class="label">Tổng:</span>
+                        <span class="value" id="postTotal">-</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span class="label">Hoạt động:</span>
+                        <span class="value" id="postActive">-</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span class="label">Đã xóa:</span>
+                        <span class="value" id="postDeleted">-</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span class="label">Hôm nay:</span>
+                        <span class="value" id="postToday">-</span>
+                    </div>
+                </div>
+
+                <!-- Search and Filter Controls -->
+                <div class="controls-container">
+                    <div class="search-container">
+                        <input type="text" id="postSearchInput" placeholder="Tìm kiếm bài viết..." class="search-input">
+                        <button id="postSearchBtn" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Tìm kiếm
+                        </button>
+                    </div>
+                    
+                    <div class="filter-container">
+                        <select id="postTypeFilter" class="filter-select">
+                            <option value="">Tất cả loại</option>
+                            <option value="ORIGINAL">Bài gốc</option>
+                            <option value="SHARE">Chia sẻ</option>
+                            <option value="text">Văn bản</option>
+                        </select>
+                        
+                        <select id="postVisibilityFilter" class="filter-select">
+                            <option value="">Tất cả quyền riêng tư</option>
+                            <option value="public">Công khai</option>
+                            <option value="private">Riêng tư</option>
+                            <option value="friends">Bạn bè</option>
+                        </select>
+                        
+                        <select id="postStatusFilter" class="filter-select">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="active">Hoạt động</option>
+                            <option value="deleted">Đã xóa</option>
+                        </select>
+                        
+                        <button id="postFilterBtn" class="btn btn-secondary">
+                            <i class="fas fa-filter"></i> Lọc
+                        </button>
+                        
+                        <button id="postRefreshBtn" class="btn btn-secondary">
+                            <i class="fas fa-sync-alt"></i> Làm mới
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Posts Table -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Danh sách bài viết</h3>
+                        <div class="table-actions">
+                            <button id="exportPostsBtn" class="btn btn-secondary">
+                                <i class="fas fa-download"></i> Xuất Excel
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-wrapper">
+                        <table id="postsTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tác giả</th>
+                                    <th>Loại</th>
+                                    <th>Quyền riêng tư</th>
+                                    <th>Nội dung</th>
+                                    <th>Likes</th>
+                                    <th>Comments</th>
+                                    <th>Ngày tạo</th>
+                                    <th>Trạng thái</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="pagination-container">
+                        <div class="pagination-info">
+                            <span id="paginationInfo">Hiển thị 0-0 của 0</span>
+                        </div>
+                        <div class="pagination-controls">
+                            <button id="prevPageBtn" class="btn btn-secondary" disabled>
+                                <i class="fas fa-chevron-left"></i> Trước
+                            </button>
+                            <span id="currentPage">1</span>
+                            <button id="nextPageBtn" class="btn btn-secondary" disabled>
+                                Sau <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Post Details Modal -->
+                <div id="postDetailsModal" class="modal">
+                    <div class="modal-content large">
+                        <div class="modal-header">
+                            <h3><i class="fas fa-file-alt"></i> Chi tiết bài viết</h3>
+                            <button class="close-btn" onclick="closePostDetailsModal()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="modal-body" id="postDetailsContent">
+                            <!-- Post details will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comments Modal -->
+                <div id="commentsModal" class="modal">
+                    <div class="modal-content large">
+                        <div class="modal-header">
+                            <h3><i class="fas fa-comments"></i> Bình luận</h3>
+                            <button class="close-btn" onclick="closeCommentsModal()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="modal-body" id="commentsContent">
+                            <!-- Comments will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Comments Section -->
+            <section id="comments" class="content-section">
+                <h2><i class="fas fa-comments"></i> Quản lý bình luận</h2>
+                
+                <div class="section-stats">
+                    <div class="mini-stat">
+                        <span class="label">Tổng:</span>
+                        <span class="value" id="commentTotal">-</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span class="label">Hôm nay:</span>
+                        <span class="value" id="commentToday">-</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span class="label">Tuần này:</span>
+                        <span class="value" id="commentWeek">-</span>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <h3>Bài viết có nhiều bình luận nhất</h3>
+                    <table id="topCommentedPostsTable">
+                        <thead>
+                            <tr>
+                                <th>Post ID</th>
+                                <th>Số bình luận</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Reactions Section -->
+            <section id="reactions" class="content-section">
+                <h2><i class="fas fa-heart"></i> Quản lý tương tác</h2>
+                
+                <div class="section-stats">
+                    <div class="mini-stat">
+                        <span class="label">Tổng:</span>
+                        <span class="value" id="reactionTotal">-</span>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Phân bố loại tương tác</h3>
+                        <canvas id="reactionTypeChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Phân bố theo đối tượng</h3>
+                        <canvas id="reactionTargetChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <h3>Bài viết có nhiều tương tác nhất</h3>
+                    <table id="topReactedPostsTable">
+                        <thead>
+                            <tr>
+                                <th>Post ID</th>
+                                <th>Loại</th>
+                                <th>Số tương tác</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Notifications Section -->
+            <section id="notifications" class="content-section">
+                <h2><i class="fas fa-bell"></i> Quản lý thông báo</h2>
+                
+                <div class="section-stats">
+                    <div class="mini-stat">
+                        <span class="label">Tổng:</span>
+                        <span class="value" id="notificationTotal">-</span>
+                    </div>
+                    <div class="mini-stat">
+                        <span class="label">Chưa đọc:</span>
+                        <span class="value" id="notificationUnread">-</span>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <h3>Thông báo gần đây</h3>
+                    <table id="recentNotificationsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Người nhận</th>
+                                <th>Người gửi</th>
+                                <th>Loại</th>
+                                <th>Nội dung</th>
+                                <th>Ngày tạo</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Health Section -->
+            <section id="health" class="content-section">
+                <h2><i class="fas fa-heartbeat"></i> Trạng thái hệ thống</h2>
+                
+                <div class="health-grid">
+                    <div class="health-card" id="postgresHealth">
+                        <div class="health-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="health-content">
+                            <h3>PostgreSQL</h3>
+                            <span class="health-status">Checking...</span>
+                        </div>
+                    </div>
+
+                    <div class="health-card" id="cassandraHealth">
+                        <div class="health-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="health-content">
+                            <h3>Cassandra</h3>
+                            <span class="health-status">Checking...</span>
+                        </div>
+                    </div>
+
+                    <div class="health-card" id="neo4jHealth">
+                        <div class="health-icon">
+                            <i class="fas fa-project-diagram"></i>
+                        </div>
+                        <div class="health-content">
+                            <h3>Neo4j</h3>
+                            <span class="health-status">Checking...</span>
+                        </div>
+                    </div>
+
+                    <div class="health-card" id="redisHealth">
+                        <div class="health-icon">
+                            <i class="fas fa-memory"></i>
+                        </div>
+                        <div class="health-content">
+                            <h3>Redis</h3>
+                            <span class="health-status">Checking...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="refresh-controls">
+                    <button id="refreshHealthBtn" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> Làm mới
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Đang tải dữ liệu...</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
