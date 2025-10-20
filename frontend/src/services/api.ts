@@ -185,6 +185,12 @@ class ApiService {
     const response = await this.api.get(url, config);
     return response;
   }
+
+  // Generic POST method for any endpoint
+  async post(url: string, data?: any, config?: any): Promise<any> {
+    const response = await this.api.post(url, data, config);
+    return response;
+  }
 }
 
 export const apiService = new ApiService();

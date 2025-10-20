@@ -6,6 +6,7 @@ import LoginModal from './components/Auth/LoginModal';
 import Overview from './components/Dashboard/Overview';
 import PostManagement from './components/Posts/PostManagement';
 import UserManagement from './components/Users/UserManagement';
+import HealthDashboard from './components/Health/HealthDashboard';
 import styled from 'styled-components';
 
 const AppContainer = styled.div`
@@ -58,6 +59,7 @@ const AppContent: React.FC = () => {
         <Route path="/" element={<Overview />} />
         <Route path="/posts" element={<PostManagement />} />
         <Route path="/users" element={<UserManagement />} />
+        <Route path="/health" element={<HealthDashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

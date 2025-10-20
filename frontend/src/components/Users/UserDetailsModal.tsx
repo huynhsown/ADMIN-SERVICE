@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { apiService } from '../../services/api';
+import RoleManagement from './RoleManagement';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -203,6 +205,66 @@ interface UserDetailsModalProps {
 }
 
 const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClose }) => {
+  const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [userStatus, setUserStatus] = useState<{ active: boolean; enabled: boolean } | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchUserRoles();
+    fetchUserStatus();
+  }, [user.userId]);
+
+  const fetchUserRoles = async () => {
+    try {
+      setLoadingRoles(true);
+      setError(null);
+      const response = await apiService.get(`/roles/user/${user.userId}`);
+      setUserRoles(response.data.roles || []);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Lỗi khi tải roles');
+    } finally {
+      setLoadingRoles(false);
+    }
+  };
+
+  const fetchUserStatus = async () => {
+    try {
+      setLoadingStatus(true);
+      setStatusError(null);
+      const response = await apiService.get(`/roles/user/${user.userId}/status`);
+      setUserStatus(response.data);
+    } catch (err: any) {
+      setStatusError(err.response?.data?.error || 'Lỗi khi tải trạng thái user');
+    } finally {
+      setLoadingStatus(false);
+    }
+  };
+
+  const handleActivateUser = async () => {
+    try {
+      await apiService.post(`/roles/user/${user.userId}/activate`);
+      await fetchUserStatus(); // Refresh status
+    } catch (err: any) {
+      setStatusError(err.response?.data?.error || 'Lỗi khi kích hoạt user');
+    }
+  };
+
+  const handleDeactivateUser = async () => {
+    try {
+      await apiService.post(`/roles/user/${user.userId}/deactivate`);
+      await fetchUserStatus(); // Refresh status
+    } catch (err: any) {
+      setStatusError(err.response?.data?.error || 'Lỗi khi vô hiệu hóa user');
+    }
+  };
+
+  const handleRolesChange = (newRoles: string[]) => {
+    setUserRoles(newRoles);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('vi-VN', {
       year: 'numeric',
@@ -256,7 +318,39 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClose }) =>
             <DetailItem>
               <DetailLabel>Trạng thái</DetailLabel>
               <DetailValue>
-                <StatusBadge className="active">Hoạt động</StatusBadge>
+                {loadingStatus ? (
+                  <span>Đang tải...</span>
+                ) : statusError ? (
+                  <span style={{ color: '#e74c3c' }}>Lỗi: {statusError}</span>
+                ) : userStatus ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <StatusBadge className={userStatus.active ? 'active' : 'inactive'}>
+                      {userStatus.active ? 'Hoạt động' : 'Vô hiệu hóa'}
+                    </StatusBadge>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {!userStatus.active && (
+                        <Button 
+                          className="success" 
+                          onClick={handleActivateUser}
+                          style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                        >
+                          Kích hoạt
+                        </Button>
+                      )}
+                      {userStatus.active && (
+                        <Button 
+                          className="secondary" 
+                          onClick={handleDeactivateUser}
+                          style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                        >
+                          Vô hiệu hóa
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <span>Không có thông tin</span>
+                )}
               </DetailValue>
             </DetailItem>
 
@@ -279,7 +373,34 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClose }) =>
               <DetailLabel>Cập nhật lần cuối</DetailLabel>
               <DetailValue>{formatDate(user.updatedAt)}</DetailValue>
             </DetailItem>
+
+            <DetailItem>
+              <DetailLabel>Roles</DetailLabel>
+              <DetailValue>
+                {loadingRoles ? (
+                  <span>Đang tải...</span>
+                ) : error ? (
+                  <span style={{ color: '#e74c3c' }}>Lỗi: {error}</span>
+                ) : userRoles.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {userRoles.map((role, index) => (
+                      <StatusBadge key={index} className="active">
+                        {role}
+                      </StatusBadge>
+                    ))}
+                  </div>
+                ) : (
+                  <span>Không có roles</span>
+                )}
+              </DetailValue>
+            </DetailItem>
           </DetailsGrid>
+
+          <RoleManagement
+            userId={user.userId}
+            currentRoles={userRoles}
+            onRolesChange={handleRolesChange}
+          />
         </ModalBody>
 
         <ModalFooter>
