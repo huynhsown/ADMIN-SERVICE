@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { apiService } from '../../services/api';
-import { PostsResponse, Post, PostFilters as PostFiltersType } from '../../types';
-import PostTable from './PostTable';
-import PostDetailsModal from './PostDetailsModal';
-import CommentsModal from './CommentsModal';
+import { NotificationsResponse, Notification, NotificationFilters as NotificationFiltersType } from '../../types';
+import NotificationTable from './NotificationTable';
+import NotificationDetailsModal from './NotificationDetailsModal';
 
 const Container = styled.div`
   h2 {
@@ -136,37 +135,35 @@ const LoadingSpinner = styled.div`
   }
 `;
 
-const PostManagement: React.FC = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
+const NotificationManagement: React.FC = () => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
     total: 0,
     totalPages: 0,
   });
-  const [filters, setFilters] = useState<PostFiltersType>({});
+  const [filters, setFilters] = useState<NotificationFiltersType>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [showPostDetails, setShowPostDetails] = useState(false);
-  const [showComments, setShowComments] = useState(false);
-  const [commentsPostId, setCommentsPostId] = useState<string>('');
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [showNotificationDetails, setShowNotificationDetails] = useState(false);
 
   useEffect(() => {
-    loadPosts();
-  }, [filters, pagination.page, pagination.limit]);
+    loadNotifications();
+  }, [filters, pagination.page]);
 
-  const loadPosts = async () => {
+  const loadNotifications = async () => {
     try {
       setLoading(true);
-      const response: PostsResponse = await apiService.getPosts(filters, {
+      const response: NotificationsResponse = await apiService.getNotifications(filters, {
         page: pagination.page,
         limit: pagination.limit,
       });
-      setPosts(response.posts);
+      setNotifications(response.notifications);
       setPagination(response.pagination);
     } catch (error: any) {
-      setError(error.message || 'Lỗi tải dữ liệu bài viết');
+      setError(error.message || 'Lỗi tải dữ liệu thông báo');
     } finally {
       setLoading(false);
     }
@@ -177,7 +174,7 @@ const PostManagement: React.FC = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const handleFilter = (newFilters: PostFiltersType) => {
+  const handleFilter = (newFilters: NotificationFiltersType) => {
     setFilters(newFilters);
     setPagination(prev => ({ ...prev, page: 1 }));
   };
@@ -192,83 +189,76 @@ const PostManagement: React.FC = () => {
       // Reset về trang đầu tiên
       setPagination(prev => ({ ...prev, page: 1 }));
       // Tải lại dữ liệu với filters hiện tại
-      const response: PostsResponse = await apiService.getPosts(filters, {
+      const response: NotificationsResponse = await apiService.getNotifications(filters, {
         page: 1,
         limit: pagination.limit,
       });
-      setPosts(response.posts);
+      setNotifications(response.notifications);
       setPagination(response.pagination);
     } catch (error: any) {
-      setError(error.message || 'Lỗi tải dữ liệu bài viết');
+      setError(error.message || 'Lỗi tải dữ liệu thông báo');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleViewPost = async (postId: string) => {
+  const handleViewNotification = async (notificationId: string) => {
     try {
-      const post = await apiService.getPostDetails(postId);
-      setSelectedPost(post);
-      setShowPostDetails(true);
+      const notification = await apiService.getNotificationDetails(notificationId);
+      setSelectedNotification(notification);
+      setShowNotificationDetails(true);
     } catch (error: any) {
-      alert('Lỗi tải chi tiết bài viết: ' + error.message);
+      alert('Lỗi tải chi tiết thông báo: ' + error.message);
     }
   };
 
-  const handleViewComments = (postId: string) => {
-    setCommentsPostId(postId);
-    setShowComments(true);
-  };
-
-  const handleDeletePost = async (postId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) return;
+  const handleDeleteNotification = async (notificationId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa thông báo này?')) return;
 
     try {
-      await apiService.deletePost(postId);
-      alert('Xóa bài viết thành công!');
+      await apiService.deleteNotification(notificationId);
+      alert('Xóa thông báo thành công!');
       // Đóng modal nếu đang mở
-      setShowPostDetails(false);
-      setSelectedPost(null);
-      // Tải lại danh sách bài viết
-      loadPosts();
+      setShowNotificationDetails(false);
+      setSelectedNotification(null);
+      // Tải lại danh sách thông báo
+      loadNotifications();
     } catch (error: any) {
-      alert('Lỗi xóa bài viết: ' + error.message);
+      alert('Lỗi xóa thông báo: ' + error.message);
     }
   };
 
-  const handleRestorePost = async (postId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn khôi phục bài viết này?')) return;
-
+  const handleMarkAsRead = async (notificationId: string, readFlag: boolean) => {
     try {
-      await apiService.restorePost(postId);
-      alert('Khôi phục bài viết thành công!');
+      await apiService.markNotificationRead(notificationId, readFlag);
+      alert(`Đánh dấu thông báo ${readFlag ? 'đã đọc' : 'chưa đọc'} thành công!`);
       // Đóng modal nếu đang mở
-      setShowPostDetails(false);
-      setSelectedPost(null);
-      // Tải lại danh sách bài viết
-      loadPosts();
+      setShowNotificationDetails(false);
+      setSelectedNotification(null);
+      // Tải lại danh sách thông báo
+      loadNotifications();
     } catch (error: any) {
-      alert('Lỗi khôi phục bài viết: ' + error.message);
+      alert('Lỗi đánh dấu thông báo: ' + error.message);
     }
   };
 
   const handleExport = () => {
     // Simple CSV export
-    if (posts.length === 0) {
+    if (notifications.length === 0) {
       alert('Không có dữ liệu để xuất!');
       return;
     }
 
     const csvContent = [
-      ['ID', 'Tác giả', 'Loại', 'Quyền riêng tư', 'Nội dung', 'Ngày tạo', 'Trạng thái'],
-      ...posts.map(post => [
-        post.post_id,
-        post.author ? post.author.username : 'Unknown',
-        post.type || 'Unknown',
-        post.visibility || 'Unknown',
-        (post.content || '').replace(/\n/g, ' ').substring(0, 100),
-        new Date(post.created_at).toLocaleString('vi-VN'),
-        post.delete_flag ? 'Đã xóa' : 'Hoạt động'
+      ['ID', 'Người nhận', 'Người gửi', 'Loại sự kiện', 'Tin nhắn', 'Ngày tạo', 'Trạng thái'],
+      ...notifications.map(notification => [
+        notification.notification_id,
+        notification.toUser ? notification.toUser.username : 'Unknown',
+        notification.fromUser ? notification.fromUser.username : 'Unknown',
+        notification.event_type || 'Unknown',
+        (notification.message || '').replace(/\n/g, ' ').substring(0, 100),
+        new Date(notification.created_at).toLocaleString('vi-VN'),
+        notification.read_flag ? 'Đã đọc' : 'Chưa đọc'
       ])
     ].map(row => row.map(field => `"${field}"`).join(',')).join('\n');
 
@@ -276,14 +266,14 @@ const PostManagement: React.FC = () => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `posts_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `notifications_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  if (loading && posts.length === 0) {
+  if (loading && notifications.length === 0) {
     return (
       <LoadingSpinner>
         <div className="spinner"></div>
@@ -295,8 +285,8 @@ const PostManagement: React.FC = () => {
   return (
     <Container>
       <h2>
-        <i className="fas fa-file-alt" style={{ marginRight: '0.5rem' }}></i>
-        Quản lý bài viết
+        <i className="fas fa-bell" style={{ marginRight: '0.5rem' }}></i>
+        Quản lý thông báo
       </h2>
 
       <SectionStats>
@@ -318,54 +308,50 @@ const PostManagement: React.FC = () => {
         <SearchContainer>
           <SearchInput
             type="text"
-            placeholder="Tìm kiếm bài viết..."
+            placeholder="Tìm kiếm thông báo..."
             onChange={(e) => handleSearch(e.target.value)}
           />
-          <Button className="primary" onClick={() => loadPosts()}>
+          <Button className="primary" onClick={() => loadNotifications()}>
             <i className="fas fa-search"></i> Tìm kiếm
           </Button>
         </SearchContainer>
 
         <FilterContainer>
           <FilterSelect
-            onChange={(e) => handleFilter({ ...filters, type: e.target.value || undefined })}
-          >
-            <option value="">Tất cả loại</option>
-            <option value="ORIGINAL">Bài gốc</option>
-            <option value="SHARE">Chia sẻ</option>
-            <option value="text">Văn bản</option>
-          </FilterSelect>
-
-          <FilterSelect
-            onChange={(e) => handleFilter({ ...filters, visibility: e.target.value || undefined })}
-          >
-            <option value="">Tất cả quyền riêng tư</option>
-            <option value="PUBLIC">Công khai</option>
-            <option value="PRIVATE">Riêng tư</option>
-            <option value="FRIEND">Bạn bè</option>
-            <option value="FOLLOWER">Người theo dõi</option>
-          </FilterSelect>
-
-          <FilterSelect
             onChange={(e) => {
               const value = e.target.value;
-              let deleteFlag;
-              if (value === 'active') {
-                deleteFlag = false;
-              } else if (value === 'deleted') {
-                deleteFlag = true;
+              let readFlag;
+              if (value === 'read') {
+                readFlag = true;
+              } else if (value === 'unread') {
+                readFlag = false;
               } else {
-                deleteFlag = undefined; // Show all
+                readFlag = undefined; // Show all
               }
               handleFilter({ 
                 ...filters, 
-                delete_flag: deleteFlag 
+                readFlag: readFlag 
               });
             }}
           >
             <option value="">Tất cả trạng thái</option>
-            <option value="active">Hoạt động</option>
-            <option value="deleted">Đã xóa</option>
+            <option value="read">Đã đọc</option>
+            <option value="unread">Chưa đọc</option>
+          </FilterSelect>
+
+          <FilterSelect
+            onChange={(e) => handleFilter({ ...filters, eventType: e.target.value || undefined })}
+          >
+            <option value="">Tất cả loại sự kiện</option>
+            <option value="post.liked">Thích bài viết</option>
+            <option value="post.commented">Bình luận bài viết</option>
+            <option value="user.followed">Theo dõi người dùng</option>
+            <option value="post.shared">Chia sẻ bài viết</option>
+            <option value="post.mentioned">Được nhắc đến</option>
+            <option value="post.created">Tạo bài viết</option>
+            <option value="post.reacted">Tương tác bài viết</option>
+            <option value="post.reaction.changed">Thay đổi tương tác</option>
+            <option value="system">Hệ thống</option>
           </FilterSelect>
 
           <Button className="secondary" onClick={handleRefresh}>
@@ -378,35 +364,26 @@ const PostManagement: React.FC = () => {
         </FilterContainer>
       </ControlsContainer>
 
-      <PostTable
-        posts={posts}
+      <NotificationTable
+        notifications={notifications}
         pagination={pagination}
         onPageChange={handlePageChange}
-        onViewPost={handleViewPost}
-        onViewComments={handleViewComments}
-        onDeletePost={handleDeletePost}
-        onRestorePost={handleRestorePost}
+        onViewNotification={handleViewNotification}
+        onDeleteNotification={handleDeleteNotification}
+        onMarkAsRead={handleMarkAsRead}
         loading={loading}
       />
 
-      {showPostDetails && selectedPost && (
-        <PostDetailsModal
-          post={selectedPost}
-          onClose={() => setShowPostDetails(false)}
-          onViewComments={handleViewComments}
-          onDeletePost={handleDeletePost}
-          onRestorePost={handleRestorePost}
-        />
-      )}
-
-      {showComments && (
-        <CommentsModal
-          postId={commentsPostId}
-          onClose={() => setShowComments(false)}
+      {showNotificationDetails && selectedNotification && (
+        <NotificationDetailsModal
+          notification={selectedNotification}
+          onClose={() => setShowNotificationDetails(false)}
+          onDeleteNotification={handleDeleteNotification}
+          onMarkAsRead={handleMarkAsRead}
         />
       )}
     </Container>
   );
 };
 
-export default PostManagement;
+export default NotificationManagement;

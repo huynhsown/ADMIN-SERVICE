@@ -13,6 +13,7 @@ class PostManagementService {
         startDate,
         endDate,
         search,
+        delete_flag,
         sortBy = 'created_at',
         sortOrder = 'DESC'
       } = filters;
@@ -20,38 +21,49 @@ class PostManagementService {
       const { page = 1, limit = 20 } = pagination;
       const offset = (page - 1) * limit;
 
-      let query = 'SELECT * FROM sme_posts WHERE delete_flag = false';
+      let query = 'SELECT * FROM sme_posts';
       const params = [];
 
+      // Handle delete_flag filter
+      if (delete_flag === undefined) {
+        // Show all posts (both active and deleted) - remove WHERE clause entirely
+        query += '';
+      } else {
+        query += ' WHERE delete_flag = ?';
+        params.push(delete_flag);
+      }
+
       // Build WHERE clause
+      let hasWhereClause = delete_flag !== undefined;
+      
       if (authorId) {
-        query += ' AND author_id = ?';
+        query += hasWhereClause ? ' AND author_id = ?' : ' WHERE author_id = ?';
         params.push(authorId);
+        hasWhereClause = true;
       }
 
       if (type) {
-        query += ' AND type = ?';
+        query += hasWhereClause ? ' AND type = ?' : ' WHERE type = ?';
         params.push(type);
+        hasWhereClause = true;
       }
 
       if (visibility) {
-        query += ' AND visibility = ?';
+        query += hasWhereClause ? ' AND visibility = ?' : ' WHERE visibility = ?';
         params.push(visibility);
+        hasWhereClause = true;
       }
 
       if (startDate) {
-        query += ' AND created_at >= ?';
+        query += hasWhereClause ? ' AND created_at >= ?' : ' WHERE created_at >= ?';
         params.push(new Date(startDate));
+        hasWhereClause = true;
       }
 
       if (endDate) {
-        query += ' AND created_at <= ?';
+        query += hasWhereClause ? ' AND created_at <= ?' : ' WHERE created_at <= ?';
         params.push(new Date(endDate));
-      }
-
-      if (search) {
-        query += ' AND content CONTAINS ?';
-        params.push(search);
+        hasWhereClause = true;
       }
 
       // Add ALLOW FILTERING for complex queries
@@ -62,6 +74,13 @@ class PostManagementService {
       
       // Sort in application (Cassandra doesn't support ORDER BY on non-partition keys)
       let posts = result.rows;
+      
+      // Apply search filter at application level
+      if (search) {
+        posts = posts.filter(post => 
+          post.content && post.content.toLowerCase().includes(search.toLowerCase())
+        );
+      }
       
       if (sortBy === 'created_at') {
         posts = posts.sort((a, b) => {
@@ -147,25 +166,25 @@ class PostManagementService {
       }
 
       // Get media
-      const mediaResult = await cassandraClient.execute(
+      const mediaResult = await CassandraHelper.executeInPostKeyspace(
         'SELECT * FROM sme_post_media WHERE post_id = ?',
         [postId]
       );
 
       // Get mentions
-      const mentionsResult = await cassandraClient.execute(
+      const mentionsResult = await CassandraHelper.executeInPostKeyspace(
         'SELECT * FROM sme_post_mentions WHERE post_id = ?',
         [postId]
       );
 
-      // Get hashtags
-      const hashtagsResult = await cassandraClient.execute(
-        'SELECT * FROM sme_posts_by_hashtag WHERE post_id = ?',
+      // Get hashtags - need to use ALLOW FILTERING since we're querying by post_id only
+      const hashtagsResult = await CassandraHelper.executeInPostKeyspace(
+        'SELECT * FROM sme_posts_by_hashtag WHERE post_id = ? ALLOW FILTERING',
         [postId]
       );
 
       // Get comments count
-      const commentsResult = await cassandraClient.execute(
+      const commentsResult = await CassandraHelper.executeInPostKeyspace(
         'SELECT COUNT(*) as count FROM sme_comments_by_post WHERE post_id = ?',
         [postId]
       );
@@ -201,13 +220,11 @@ class PostManagementService {
   // Get comments for a post
   async getPostComments(postId, pagination = {}) {
     try {
-      await cassandraClient.execute('USE sme_post_keyspace');
-
       const { page = 1, limit = 20 } = pagination;
       const offset = (page - 1) * limit;
 
       // Get comments
-      const commentsResult = await cassandraClient.execute(
+      const commentsResult = await CassandraHelper.executeInPostKeyspace(
         'SELECT * FROM sme_comments_by_post WHERE post_id = ? ORDER BY created_at ASC',
         [postId]
       );
@@ -256,23 +273,21 @@ class PostManagementService {
   // Delete post (soft delete)
   async deletePost(postId, adminId) {
     try {
-      await cassandraClient.execute('USE sme_post_keyspace');
-
       // Update post delete_flag
-      await cassandraClient.execute(
+      await CassandraHelper.executeInPostKeyspace(
         'UPDATE sme_posts SET delete_flag = true, updated_at = ? WHERE post_id = ?',
         [new Date(), postId]
       );
 
       // Update post_by_author delete_flag
-      const postResult = await cassandraClient.execute(
+      const postResult = await CassandraHelper.executeInPostKeyspace(
         'SELECT author_id, created_at FROM sme_posts WHERE post_id = ?',
         [postId]
       );
 
       if (postResult.rows.length > 0) {
         const post = postResult.rows[0];
-        await cassandraClient.execute(
+        await CassandraHelper.executeInPostKeyspace(
           'UPDATE sme_posts_by_author SET delete_flag = true, updated_at = ? WHERE author_id = ? AND created_at = ? AND post_id = ?',
           [new Date(), post.author_id, post.created_at, postId]
         );
@@ -291,23 +306,21 @@ class PostManagementService {
   // Restore post
   async restorePost(postId, adminId) {
     try {
-      await cassandraClient.execute('USE sme_post_keyspace');
-
       // Update post delete_flag
-      await cassandraClient.execute(
+      await CassandraHelper.executeInPostKeyspace(
         'UPDATE sme_posts SET delete_flag = false, updated_at = ? WHERE post_id = ?',
         [new Date(), postId]
       );
 
       // Update post_by_author delete_flag
-      const postResult = await cassandraClient.execute(
+      const postResult = await CassandraHelper.executeInPostKeyspace(
         'SELECT author_id, created_at FROM sme_posts WHERE post_id = ?',
         [postId]
       );
 
       if (postResult.rows.length > 0) {
         const post = postResult.rows[0];
-        await cassandraClient.execute(
+        await CassandraHelper.executeInPostKeyspace(
           'UPDATE sme_posts_by_author SET delete_flag = false, updated_at = ? WHERE author_id = ? AND created_at = ? AND post_id = ?',
           [new Date(), post.author_id, post.created_at, postId]
         );
@@ -326,23 +339,21 @@ class PostManagementService {
   // Delete comment
   async deleteComment(commentId, adminId) {
     try {
-      await cassandraClient.execute('USE sme_post_keyspace');
-
       // Update comment delete_flag
-      await cassandraClient.execute(
+      await CassandraHelper.executeInPostKeyspace(
         'UPDATE sme_comments SET delete_flag = true, updated_at = ? WHERE comment_id = ?',
         [new Date(), commentId]
       );
 
       // Update comment_by_post delete_flag
-      const commentResult = await cassandraClient.execute(
+      const commentResult = await CassandraHelper.executeInPostKeyspace(
         'SELECT post_id, created_at FROM sme_comments WHERE comment_id = ?',
         [commentId]
       );
 
       if (commentResult.rows.length > 0) {
         const comment = commentResult.rows[0];
-        await cassandraClient.execute(
+        await CassandraHelper.executeInPostKeyspace(
           'UPDATE sme_comments_by_post SET delete_flag = true, updated_at = ? WHERE post_id = ? AND created_at = ? AND comment_id = ?',
           [new Date(), comment.post_id, comment.created_at, commentId]
         );
@@ -361,22 +372,20 @@ class PostManagementService {
   // Get post statistics for admin
   async getPostStatistics() {
     try {
-      await cassandraClient.execute('USE sme_post_keyspace');
-
       // Total posts
-      const totalPostsResult = await cassandraClient.execute('SELECT COUNT(*) as total FROM sme_posts');
+      const totalPostsResult = await CassandraHelper.executeInPostKeyspace('SELECT COUNT(*) as total FROM sme_posts');
       const totalPosts = parseInt(totalPostsResult.rows[0].total);
 
       // Active posts (not deleted)
-      const activePostsResult = await cassandraClient.execute('SELECT COUNT(*) as active FROM sme_posts WHERE delete_flag = false');
+      const activePostsResult = await CassandraHelper.executeInPostKeyspace('SELECT COUNT(*) as active FROM sme_posts WHERE delete_flag = false');
       const activePosts = parseInt(activePostsResult.rows[0].active);
 
       // Deleted posts
-      const deletedPostsResult = await cassandraClient.execute('SELECT COUNT(*) as deleted FROM sme_posts WHERE delete_flag = true');
+      const deletedPostsResult = await CassandraHelper.executeInPostKeyspace('SELECT COUNT(*) as deleted FROM sme_posts WHERE delete_flag = true');
       const deletedPosts = parseInt(deletedPostsResult.rows[0].deleted);
 
       // Posts by type
-      const allPostsResult = await cassandraClient.execute('SELECT type FROM sme_posts');
+      const allPostsResult = await CassandraHelper.executeInPostKeyspace('SELECT type FROM sme_posts');
       const postsByType = {};
       allPostsResult.rows.forEach(row => {
         const type = row.type || 'unknown';
@@ -384,7 +393,7 @@ class PostManagementService {
       });
 
       // Posts by visibility
-      const allPostsVisibilityResult = await cassandraClient.execute('SELECT visibility FROM sme_posts');
+      const allPostsVisibilityResult = await CassandraHelper.executeInPostKeyspace('SELECT visibility FROM sme_posts');
       const postsByVisibility = {};
       allPostsVisibilityResult.rows.forEach(row => {
         const visibility = row.visibility || 'unknown';
@@ -394,7 +403,7 @@ class PostManagementService {
       // Posts created today
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayPostsResult = await cassandraClient.execute(
+      const todayPostsResult = await CassandraHelper.executeInPostKeyspace(
         'SELECT COUNT(*) as today FROM sme_posts WHERE created_at >= ? ALLOW FILTERING',
         [today]
       );
@@ -403,7 +412,7 @@ class PostManagementService {
       // Posts created this week
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      const weekPostsResult = await cassandraClient.execute(
+      const weekPostsResult = await CassandraHelper.executeInPostKeyspace(
         'SELECT COUNT(*) as week FROM sme_posts WHERE created_at >= ? ALLOW FILTERING',
         [weekAgo]
       );
@@ -412,14 +421,14 @@ class PostManagementService {
       // Posts created this month
       const monthAgo = new Date();
       monthAgo.setMonth(monthAgo.getMonth() - 1);
-      const monthPostsResult = await cassandraClient.execute(
+      const monthPostsResult = await CassandraHelper.executeInPostKeyspace(
         'SELECT COUNT(*) as month FROM sme_posts WHERE created_at >= ? ALLOW FILTERING',
         [monthAgo]
       );
       const monthPosts = parseInt(monthPostsResult.rows[0].month);
 
       // Top authors by post count
-      const allPostsAuthorResult = await cassandraClient.execute('SELECT author_id FROM sme_posts WHERE delete_flag = false');
+      const allPostsAuthorResult = await CassandraHelper.executeInPostKeyspace('SELECT author_id FROM sme_posts WHERE delete_flag = false');
       const authorPostCounts = {};
       allPostsAuthorResult.rows.forEach(row => {
         const authorId = row.author_id;
@@ -451,19 +460,21 @@ class PostManagementService {
   // Search posts
   async searchPosts(query, filters = {}, pagination = {}) {
     try {
-      await cassandraClient.execute('USE sme_post_keyspace');
-
       const { page = 1, limit = 20 } = pagination;
       const offset = (page - 1) * limit;
 
-      // Search in content
-      const searchResult = await cassandraClient.execute(
-        'SELECT * FROM sme_posts WHERE content CONTAINS ? AND delete_flag = false ALLOW FILTERING',
-        [query]
+      // Get all posts and filter at application level
+      const allPostsResult = await CassandraHelper.executeInPostKeyspace(
+        'SELECT * FROM sme_posts WHERE delete_flag = false ALLOW FILTERING'
+      );
+
+      // Apply search filter at application level
+      const searchResult = allPostsResult.rows.filter(post => 
+        post.content && post.content.toLowerCase().includes(query.toLowerCase())
       );
 
       // Sort by relevance (simple: by created_at for now)
-      const sortedPosts = searchResult.rows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      const sortedPosts = searchResult.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
       // Pagination
       const total = sortedPosts.length;
@@ -510,13 +521,11 @@ class PostManagementService {
   // Get posts by hashtag
   async getPostsByHashtag(hashtag, pagination = {}) {
     try {
-      await cassandraClient.execute('USE sme_post_keyspace');
-
       const { page = 1, limit = 20 } = pagination;
       const offset = (page - 1) * limit;
 
       // Get posts by hashtag
-      const hashtagResult = await cassandraClient.execute(
+      const hashtagResult = await CassandraHelper.executeInPostKeyspace(
         'SELECT post_id, author_id, created_at FROM sme_posts_by_hashtag WHERE tag = ? ORDER BY created_at DESC',
         [hashtag]
       );
@@ -528,7 +537,7 @@ class PostManagementService {
       const posts = await Promise.all(
         paginatedHashtags.map(async (hashtagRow) => {
           try {
-            const postResult = await cassandraClient.execute(
+            const postResult = await CassandraHelper.executeInPostKeyspace(
               'SELECT * FROM sme_posts WHERE post_id = ?',
               [hashtagRow.post_id]
             );

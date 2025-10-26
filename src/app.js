@@ -11,6 +11,7 @@ const statsRoutes = require('./routes/stats');
 const postsRoutes = require('./routes/posts');
 const usersRoutes = require('./routes/users');
 const rolesRoutes = require('./routes/roles');
+const notificationsRoutes = require('./routes/notifications');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -43,6 +44,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/posts', postsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/roles', rolesRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

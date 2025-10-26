@@ -59,8 +59,6 @@ const Sidebar: React.FC = () => {
     { path: '/', label: 'Tổng quan', icon: 'fas fa-tachometer-alt' },
     { path: '/users', label: 'Người dùng', icon: 'fas fa-users' },
     { path: '/posts', label: 'Bài viết', icon: 'fas fa-file-alt' },
-    { path: '/comments', label: 'Bình luận', icon: 'fas fa-comments' },
-    { path: '/reactions', label: 'Tương tác', icon: 'fas fa-heart' },
     { path: '/notifications', label: 'Thông báo', icon: 'fas fa-bell' },
     { path: '/health', label: 'Hệ thống', icon: 'fas fa-heartbeat' },
   ];
