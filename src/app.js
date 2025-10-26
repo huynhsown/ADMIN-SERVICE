@@ -17,14 +17,14 @@ const notificationsRoutes = require('./routes/notifications');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 6666;
 
 // Security middleware
 app.use(helmet());
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || 'http://localhost:6666',
   credentials: true
 }));
 
