@@ -13,7 +13,10 @@ import {
   CommentsResponse,
   SearchResponse,
   Post,
-  PostFilters
+  PostFilters,
+  NotificationsResponse,
+  Notification,
+  NotificationFilters
 } from '../types';
 
 class ApiService {
@@ -113,7 +116,7 @@ class ApiService {
   }
 
   async getNotificationStats(): Promise<NotificationStats> {
-    const response: AxiosResponse<NotificationStats> = await this.api.get('/stats/notifications');
+    const response: AxiosResponse<NotificationStats> = await this.api.get('/notifications/stats/overview');
     return response.data;
   }
 
@@ -190,6 +193,44 @@ class ApiService {
   async post(url: string, data?: any, config?: any): Promise<any> {
     const response = await this.api.post(url, data, config);
     return response;
+  }
+
+  // Notifications endpoints
+  async getNotifications(filters: NotificationFilters = {}, pagination = { page: 1, limit: 20 }): Promise<NotificationsResponse> {
+    const params = { ...filters, ...pagination };
+    const response: AxiosResponse<NotificationsResponse> = await this.api.get('/notifications', { params });
+    return response.data;
+  }
+
+  async getNotificationDetails(notificationId: string): Promise<Notification> {
+    const response: AxiosResponse<Notification> = await this.api.get(`/notifications/${notificationId}`);
+    return response.data;
+  }
+
+  async deleteNotification(notificationId: string): Promise<{ success: boolean; message: string }> {
+    const response: AxiosResponse<{ success: boolean; message: string }> = await this.api.delete(`/notifications/${notificationId}`);
+    return response.data;
+  }
+
+  async markNotificationRead(notificationId: string, readFlag: boolean): Promise<{ success: boolean; message: string }> {
+    const response: AxiosResponse<{ success: boolean; message: string }> = await this.api.patch(`/notifications/${notificationId}/read`, { readFlag });
+    return response.data;
+  }
+
+  async searchNotifications(query: string, filters: NotificationFilters = {}, pagination = { page: 1, limit: 20 }): Promise<SearchResponse> {
+    const params = { q: query, ...filters, ...pagination };
+    const response: AxiosResponse<SearchResponse> = await this.api.get('/notifications/search', { params });
+    return response.data;
+  }
+
+  async getNotificationsByUser(userId: string, pagination = { page: 1, limit: 20 }): Promise<NotificationsResponse> {
+    const response: AxiosResponse<NotificationsResponse> = await this.api.get(`/notifications/user/${userId}`, { params: pagination });
+    return response.data;
+  }
+
+  async getNotificationsByEventType(eventType: string, pagination = { page: 1, limit: 20 }): Promise<NotificationsResponse> {
+    const response: AxiosResponse<NotificationsResponse> = await this.api.get(`/notifications/event/${eventType}`, { params: pagination });
+    return response.data;
   }
 }
 

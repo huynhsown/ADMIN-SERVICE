@@ -94,18 +94,27 @@ export interface ReactionStats {
   topReactedPosts: Array<{ target_id: string; target_type: string; reaction_count: number }>;
 }
 
+export interface Notification {
+  notification_id: string;
+  to_user_id: string;
+  from_user_id: string;
+  event_type: string;
+  entity_id: string;
+  message: string;
+  created_at: string;
+  read_flag: boolean;
+  toUser?: User;
+  fromUser?: User;
+}
+
 export interface NotificationStats {
   total: number;
+  read: number;
   unread: number;
-  byType: Array<{ event_type: string; count: number }>;
-  recent: Array<{
-    notification_id: string;
-    to_user_id: string;
-    from_user_id: string;
-    event_type: string;
-    message: string;
-    created_at: string;
-  }>;
+  byEventType: Record<string, number>;
+  today: number;
+  week: number;
+  month: number;
 }
 
 export interface DashboardOverview {
@@ -198,11 +207,19 @@ export interface UsersResponse {
   pagination: Pagination;
 }
 
-export interface UserAnalytics {
-  totalUsers: number;
-  usersWithAvatars: number;
-  usersWithPhone: number;
-  recentUsers: User[];
-  usersByMonth: Array<{ month: string; count: number }>;
-  usersByYear: Array<{ year: number; count: number }>;
+export interface NotificationsResponse {
+  notifications: Notification[];
+  pagination: Pagination;
+}
+
+export interface NotificationFilters {
+  toUserId?: string;
+  fromUserId?: string;
+  eventType?: string;
+  readFlag?: boolean;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
 }

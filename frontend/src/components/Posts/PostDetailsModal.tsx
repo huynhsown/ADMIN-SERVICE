@@ -329,14 +329,20 @@ const PostDetailsModal: React.FC<PostDetailsModalProps> = ({
                 {post.delete_flag ? (
                   <Button
                     className="warning"
-                    onClick={() => onRestorePost(post.post_id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRestorePost(post.post_id);
+                    }}
                   >
                     <i className="fas fa-undo"></i> Khôi phục
                   </Button>
                 ) : (
                   <Button
                     className="danger"
-                    onClick={() => onDeletePost(post.post_id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeletePost(post.post_id);
+                    }}
                   >
                     <i className="fas fa-trash"></i> Xóa
                   </Button>
