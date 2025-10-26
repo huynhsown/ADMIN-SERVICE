@@ -7,7 +7,6 @@ Admin Dashboard cho hệ thống Social Media Enterprise (SME) - cung cấp giao
 ### 📊 Dashboard Tổng quan
 - Thống kê tổng quan về người dùng, bài viết, bình luận, tương tác
 - Biểu đồ trực quan với Chart.js
-- Cập nhật dữ liệu real-time
 
 ### 👥 Quản lý Người dùng
 - Thống kê người dùng theo thời gian (hôm nay, tuần, tháng)
